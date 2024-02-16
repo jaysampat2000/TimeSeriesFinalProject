@@ -1,0 +1,51 @@
+---
+title: "Untitled"
+author: "Jay"
+date: "2024-02-09"
+output: html_document
+---
+
+```{r}
+# read in the India GDP File
+library(readxl)
+IndiaGDP <- read_excel("India_GDP.xlsx", sheet = "Sheet1")
+
+# plot the India GDP
+# names(IndiaGDP)[1] <- "Year"
+# names(IndiaGDP)[2] <- "GDP"
+IndiaGDP_ts <- ts(IndiaGDP$GDP, start = c(1980), end = c(2023), frequency = 1)
+
+# plot India GDP
+plot(IndiaGDP_ts, type = "l", col = "blue")
+```
+```{r}
+# detrend for linear
+Mod1 <- tslm(IndiaGDP_ts ~ trend)
+summary(Mod1)
+
+# plot residuals
+plot(Mod1$residuals, type = "l")
+# shows a clear quadratic trend
+
+# detrend for linear and quadratic
+Mod2 <- tslm(IndiaGDP_ts ~ trend + I(trend ^ 2))
+summary(Mod2)
+
+# plot residuals
+plot(Mod2$residuals, type = "l")
+
+# clear evidence of cycles
+# maybe detrend for cyclical too
+
+# store residuals
+Mod2_resids <- Mod2$residuals
+
+# check for autocorrelation
+par(mfrow = c(1, 2))
+A = Acf(Mod2_resids, main = "ACF of Residuals")
+A
+B = Pacf(Mod2_resids, main = "PACF of Residuals")
+B
+
+```
+
