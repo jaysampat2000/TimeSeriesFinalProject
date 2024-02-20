@@ -25,6 +25,7 @@ t
 # plot India GDP
 plot(IndiaGDP_ts, type = "l", col = "blue")
 ```
+
 ```{r}
 library(forecast)
 
@@ -89,5 +90,39 @@ A = Acf(ARMA1_res, main = "ACF of Residuals")
 A
 B = Pacf(ARMA1_res, main = "PACF of Residuals")
 B
+```
+
+Neural Network
+```{r}
+library(neuralnet)
+library(dplyr)
+library(caret)
+
+setup1<-nnetar(IndiaGDP_ts[1:36], p=12, repeats=20, lambda="auto")
+
+#Once the model is set up, we forecast. PI - prediction intervals
+Fcast<-forecast(setup1, PI=TRUE, h=8)
+#Show results
+autoplot(Fcast)
+```
+
+Prediction for 2024
+```{r}
+gdp2023.residual <- window(Mod4$residuals, start = c(2023), end = c(2023))
+plugin.forecast <- gdp2024.residual*ARMA1$coef[1] + ARMA1$coef[2]
+print(plugin.forecast)
+```
+```{r}
+gdp2023.residual <- window(Mod4$residuals, start = c(1980), end = c(2015))
+
+t<-length(gdp2023.residual)+1
+
+forecasted.value <- Mod4$coefficients[1] + Mod4$coefficients[2]*t + Mod4$coefficients[3]*(t^2)
+
+forecasted.value
+```
+
+```{r}
+plugin.forecast+forecasted.value
 ```
 
