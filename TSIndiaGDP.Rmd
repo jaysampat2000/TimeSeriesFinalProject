@@ -1,6 +1,6 @@
 ---
 title: "Untitled"
-author: "Jay"
+author: "Jay & P"
 date: "2024-02-09"
 output: html_document
 ---
@@ -19,6 +19,7 @@ IndiaGDP_ts <- ts(IndiaGDP$GDP, start = c(1980), end = c(2023), frequency = 1)
 plot(IndiaGDP_ts, type = "l", col = "blue")
 ```
 ```{r}
+library(forecast)
 # detrend for linear
 Mod1 <- tslm(IndiaGDP_ts ~ trend)
 summary(Mod1)
