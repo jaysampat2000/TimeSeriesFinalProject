@@ -13,13 +13,23 @@ IndiaGDP <- read_excel("India_GDP.xlsx", sheet = "Sheet1")
 # plot the India GDP
 # names(IndiaGDP)[1] <- "Year"
 # names(IndiaGDP)[2] <- "GDP"
-IndiaGDP_ts <- ts(IndiaGDP$GDP, start = c(1980), end = c(2023), frequency = 1)
+IndiaGDP_ts <-
+  ts(
+    IndiaGDP$GDP,
+    start = c(1980),
+    end = c(2023),
+    frequency = 1
+  )
+t
 
 # plot India GDP
 plot(IndiaGDP_ts, type = "l", col = "blue")
 ```
 ```{r}
 library(forecast)
+
+IndiaGDP <- IndiaGDP[-c(45,46,47,48,49), ]
+
 # detrend for linear
 Mod1 <- tslm(IndiaGDP_ts ~ trend)
 summary(Mod1)
@@ -29,7 +39,7 @@ plot(Mod1$residuals, type = "l")
 # shows a clear quadratic trend
 
 # detrend for linear and quadratic
-Mod2 <- tslm(IndiaGDP_ts ~ trend + I(trend ^ 2))
+Mod2 <- tslm(IndiaGDP_ts ~ I(trend ^ 2)) # R2 = 0.96
 summary(Mod2)
 
 # plot residuals
@@ -37,16 +47,47 @@ plot(Mod2$residuals, type = "l")
 
 # clear evidence of cycles
 # maybe detrend for cyclical too
+# make a t variable to track the row number of the indiagdp dataframe
+t <- 1:nrow(IndiaGDP)
+IndiaGDP$t <- t
+cyc1 <- sin((2 * pi * t) / 40)
+cyc2 <- cos((2 * pi * t) / 40)
 
+Mod3 <- tslm(IndiaGDP_ts ~ cyc1 + cyc2)
+summary(Mod3)
+
+Mod4 <- tslm(IndiaGDP_ts ~ I(trend ^ 2) + cyc1 + cyc2)
+summary(Mod4)
+
+plot(Mod4$residuals, type = "l")
 # store residuals
-Mod2_resids <- Mod2$residuals
+Mod4_resids <- Mod4$residuals
 
 # check for autocorrelation
 par(mfrow = c(1, 2))
-A = Acf(Mod2_resids, main = "ACF of Residuals")
+A = Acf(Mod4_resids, main = "ACF of Residuals")
 A
-B = Pacf(Mod2_resids, main = "PACF of Residuals")
+B = Pacf(Mod4_resids, main = "PACF of Residuals")
 B
 
+```
+AR(1) and MA(8) are present.
+ARIMA
+```{r}
+# fit ARIMA model
+ARMA1 <- Arima(Mod4_resids, order = c(0, 0, 8))
+summary(ARMA1)
+```
+```{r}
+# abs(-0.5050)/0.1886 > 2 which is significant
+
+ARMA1_res <- ARMA1$residuals
+plot(ARMA1_res, type = "l")
+
+par(mfrow = c(1, 2))
+A = Acf(ARMA1_res, main = "ACF of Residuals")
+A
+B = Pacf(ARMA1_res, main = "PACF of Residuals")
+B
 ```
 
