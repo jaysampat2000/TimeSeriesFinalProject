@@ -1,12 +1,11 @@
 ---
-title: "Untitled"
+title: "India GDP Project"
 author: "Jay & P"
 date: "2024-02-09"
 output: html_document
 ---
-
-```{r}
 # read in the India GDP File
+```{r}
 library(readxl)
 IndiaGDP <- read_excel("India_GDP.xlsx", sheet = "Sheet1")
 
@@ -26,6 +25,7 @@ t
 plot(IndiaGDP_ts, type = "l", col = "blue")
 ```
 
+# Detrend The Model
 ```{r}
 library(forecast)
 
@@ -73,7 +73,9 @@ B
 
 ```
 AR(1) and MA(8) are present.
-ARIMA
+
+
+## ARIMA Model
 ```{r}
 # fit ARIMA model
 ARMA1 <- Arima(Mod4_resids, order = c(0, 0, 8))
@@ -109,9 +111,10 @@ autoplot(Fcast)
 Prediction for 2024
 ```{r}
 gdp2023.residual <- window(Mod4$residuals, start = c(2023), end = c(2023))
-plugin.forecast <- gdp2024.residual*ARMA1$coef[1] + ARMA1$coef[2]
+plugin.forecast <- gdp2023.residual*ARMA1$coef[1] + ARMA1$coef[2] + ARMA1$coef[3] + ARMA1$coef[4] + ARMA1$coef[5] + ARMA1$coef[6] + ARMA1$coef[7] + ARMA1$coef[8] + ARMA1$coef[9]
 print(plugin.forecast)
 ```
+
 ```{r}
 gdp2023.residual <- window(Mod4$residuals, start = c(1980), end = c(2015))
 
