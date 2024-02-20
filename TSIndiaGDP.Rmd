@@ -117,7 +117,7 @@ gdp2023.residual <- window(Mod4$residuals, start = c(1980), end = c(2015))
 
 t<-length(gdp2023.residual)+1
 
-forecasted.value <- Mod4$coefficients[1] + Mod4$coefficients[2]*t + Mod4$coefficients[3]*(t^2)
+forecasted.value <- Mod4$coefficients[1] + Mod4$coefficients[2]*(t^2) + Mod4$coefficients[3]*sin((2 * pi * t) / 40) + Mod4$coefficients[4]*cos((2 * pi * t) / 40)
 
 forecasted.value
 ```
