@@ -100,10 +100,10 @@ library(neuralnet)
 library(dplyr)
 library(caret)
 
-setup1<-nnetar(IndiaGDP_ts[1:36], p=12, repeats=20, lambda="auto")
+setup1<-nnetar(IndiaGDP_ts[1:40], p=12, repeats=20, lambda="auto")
 
 #Once the model is set up, we forecast. PI - prediction intervals
-Fcast<-forecast(setup1, PI=TRUE, h=8)
+Fcast<-forecast(setup1, PI=TRUE, h=4)
 #Show results
 autoplot(Fcast)
 ```
@@ -116,7 +116,7 @@ print(plugin.forecast)
 ```
 
 ```{r}
-gdp2023.residual <- window(Mod4$residuals, start = c(1980), end = c(2015))
+gdp2023.residual <- window(Mod4$residuals, start = c(1980), end = c(2019))
 
 t<-length(gdp2023.residual)+1
 
