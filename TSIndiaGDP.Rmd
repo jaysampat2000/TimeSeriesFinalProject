@@ -212,6 +212,7 @@ Fcast <- forecast(setup1, PI = TRUE, h = 4)
 autoplot(Fcast)
 ```
 
+
 Prediction for 2024
 ```{r}
 gdp2023.residual <-
@@ -235,7 +236,9 @@ forecasted.value <-
 forecasted.value
 ```
 
+
 ```{r}
 plugin.forecast + forecasted.value
 ```
+
 
