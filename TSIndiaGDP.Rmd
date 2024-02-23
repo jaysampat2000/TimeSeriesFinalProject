@@ -32,34 +32,6 @@ library(forecast)
 # got rid of the forecasts 2024-2028 (5 years)
 IndiaGDP <- IndiaGDP[-c(45, 46, 47, 48, 49),]
 
-# detrend for linear
-Mod1 <- tslm(IndiaGDP_ts ~ trend)
-summary(Mod1)
-
-# plot residuals
-plot(Mod1$residuals, type = "l")
-# shows a clear quadratic trend
-
-# detrend for linear and quadratic
-Mod2 <- tslm(IndiaGDP_ts ~ I(trend ^ 2)) # R2 = 0.96
-summary(Mod2)
-
-# detrend for cubic
-ModCubic <- tslm(IndiaGDP_ts ~ I(trend ^ 3)) # R2 = 0.9885 and ***
-summary(ModCubic)
-
-# detrend for quartic
-ModQuartic <- tslm(IndiaGDP_ts ~ I(trend ^ 4)) # R2 = 0.9679 and ***
-summary(ModQuartic)
-
-# detrend for cubic and quadratic
-ModCubicQuad <-
-  tslm(IndiaGDP_ts ~ I(trend ^ 3) + I(trend ^ 2)) # R2 = 0.9886 and only cubic is *** quadratic is not significant
-summary(ModCubicQuad)
-
-# plot residuals
-plot(Mod2$residuals, type = "l")
-
 # clear evidence of cycles
 # detrend for cyclical too
 # make a t variable to track the row number of the IndiaGDP data frame
@@ -69,73 +41,25 @@ cyc1 <- sin((2 * pi * t) / 44)
 cyc2 <- cos((2 * pi * t) / 44)
 # a half cycle is about 22 years, so the whole cycle would be 44 years
 # determined 22 after looking at the residuals
-
-# detrending on both cycles
-Mod3 <- tslm(IndiaGDP_ts ~ cyc1 + cyc2)
-summary(Mod3)
-
-# detrend on quadratic + both cycles
-# Best Model so far in terms of R^2
-Mod4 <- tslm(IndiaGDP_ts ~ I(trend ^ 2) + cyc1 + cyc2)
-summary(Mod4) # for 44, R^2 is 0.9916, quadratic is *** and cyc1 is * and cyc2 is ***
-
-# plot residuals
-plot(Mod4$residuals, type = "l")
-
-# detrend for cubic and cycles
-ModCubicCycles <- tslm(IndiaGDP_ts ~ I(trend ^ 3) + cyc1 + cyc2)
-summary(ModCubicCycles)
-# R^2 of 0.9903 and cubic is *** and cyc1 is . (<0.1) and cyc2 is * (<0.05)
-# for 44, R^2 is 0.9902, cubic is *** and cyc1 is * and cyc2 is *
-# not as good
-
-# detrend for cubic and cyc2 only
-ModCubicCyc2 <- tslm(IndiaGDP_ts ~ I(trend ^ 3) + cyc2)
-summary(ModCubicCyc2)
-# R^2 of 0.9896 and cubic is *** and cyc2 is * (<0.05)
-
-# detrend for quadratic and cyc1
-ModQuadCyc1 <- tslm(IndiaGDP_ts ~ I(trend ^ 2) + cyc1)
-summary(ModQuadCyc1)
-
-# detrend for quadratic and cyc2
-ModQuadCyc2 <- tslm(IndiaGDP_ts ~ I(trend ^ 2) + cyc2)
-summary(ModQuadCyc2)
-# at 44, R^2 is 0.9901, quadratic is *** and cyc2 is ***
-
-# plot residuals
-plot(ModCubicCycles$residuals, type = "l")
-
-# plot residuals
-plot(ModCubicCyc2$residuals, type = "l")
-
-# plot best mod (Mod 4) residuals - takes out most of the cycles
-plot(Mod4$residuals, type = "l")
-# store residuals
-Mod4_resids <- Mod4$residuals
-
-# check for autocorrelation
-par(mfrow = c(1, 2))
-A = Acf(Mod4_resids, main = "ACF of Residuals")
-A
-B = Pacf(Mod4_resids, main = "PACF of Residuals")
-B
 ```
-Just MA(8) is present. No AR components present.
 
 
 ## Data Partitioning
 ```{r}
 # partition the data - 41 years training, 3 years validation
-train.ts <- window(IndiaGDP_ts, start = c(1980), end = c(2020))
-valid.ts <- window(IndiaGDP_ts, start = c(2021), end = c(2023))
+train.ts <- window(IndiaGDP_ts, start = c(1980), end = c(2018))
+valid.ts <- window(IndiaGDP_ts, start = c(2019), end = c(2023))
 # we wanted COVID to be present in both training and validation sets
 # justify why you choose your training period
 # it must be representative of the circumstances of the forecast horizon
 
 # detrend on train
-DTGDP <- tslm(train.ts ~ I(trend ^ 2) + cyc2[1:41])
+DTGDP <- tslm(train.ts ~ I(trend ^ 2) + cyc2[1:39])
 summary(DTGDP)
+
+# detrend on cubic and cycle2
+DTGDP_cubic_cyc2 <- tslm(train.ts ~ I(trend ^ 3) + cyc2[1:39])
+summary(DTGDP_cubic_cyc2)
 
 # detrend for linear
 DTGDP_linear <- tslm(train.ts ~ trend)
@@ -150,7 +74,7 @@ DTGDP_cubic <- tslm(train.ts ~ I(trend ^ 3))
 summary(DTGDP_cubic) # R^2 = 0.9824 and ***
 
 # detrend for cycles
-DTGDP_cyc <- tslm(train.ts ~ cyc1[1:41] + cyc2[1:41])
+DTGDP_cyc <- tslm(train.ts ~ cyc1[1:39] + cyc2[1:39])
 summary(DTGDP_cyc) # R^2 = 0.7323 and both cycles are ***
 
 # detrend for cubic and linear
@@ -162,7 +86,7 @@ DTGDP_cubic_quad <- tslm(train.ts ~ I(trend ^ 3) + I(trend ^ 2))
 summary(DTGDP_cubic_quad) # R^2 = 0.9824. Cubic is `***` and quadratic is not sig
 
 # detrend for cubic and cycles
-DTGDP_cubic_cyc <- tslm(train.ts ~ I(trend ^ 3) + cyc1[1:41] + cyc2[1:41])
+DTGDP_cubic_cyc <- tslm(train.ts ~ I(trend ^ 3) + cyc1[1:39] + cyc2[1:39])
 summary(DTGDP_cubic_cyc) # R^2 = 0.985. Cubic is *** and both cycles are *
 
 # most parsimonious is just cubic
@@ -178,14 +102,14 @@ plot(DTGDP_cubic_cyc$residuals, type = "l")
 # test for autocorrelation
 library(car)
 # autocorrelation
-durbinWatsonTest(DTGDP_cubic)
-#  lag Autocorrelation D-W Statistic p-value
-#   1       0.5189635     0.6758651       0
+durbinWatsonTest(DTGDP)
+# lag Autocorrelation D-W Statistic p-value
+#   1       0.5778103     0.8111599   0.014
 # Alternative hypothesis: rho != 0
 # there is autocorrelation
 
-# store residuals
-DTGDP_cubic_resids <- DTGDP_cubic$residuals
+# store residuals - MAKE SURE THIS IS USING THE BEST MODEL
+DTGDP_cubic_resids <- DTGDP$residuals
 
 # Check ACF PACF of residuals
 par(mfrow = c(1, 2))
@@ -199,7 +123,7 @@ ARMA1_DT <- Arima(DTGDP_cubic_resids, order = c(1, 0, 0))
 summary(ARMA1_DT)
 
 # check for significance
-0.7031 / 0.1371
+0.5825 / 0.1284
 # greater than 2 so it is significant
 
 # get and plot the residuals
@@ -213,7 +137,7 @@ B = Pacf(ARMA1_resids, main = "PACF of Residuals")
 B
 
 # All components have been removed
-# AR(1) took care of the MA(1) and MA(8)
+# Removing AR(1) took care of the MA(1) and MA(8)
 
 # We can now forecast
 ```
@@ -224,13 +148,13 @@ library(neuralnet)
 library(dplyr)
 library(caret)
 
-setup1 <- nnetar(IndiaGDP_ts[1:41],
+setup1 <- nnetar(IndiaGDP_ts[1:39],
                  p = 12,
                  repeats = 20,
                  lambda = "auto")
 
 #Once the model is set up, we forecast. PI - prediction intervals
-Fcast <- forecast(setup1, PI = TRUE, h = 3)
+Fcast <- forecast(setup1, PI = TRUE, h = 5)
 #Show results
 autoplot(Fcast)
 ```
@@ -239,13 +163,10 @@ autoplot(Fcast)
 Prediction for 2024
 ```{r}
 gdp2023.residual <-
-  window(DTGDP_cubic_resids, start = c(2020), end = c(2020))
-
+  window(DTGDP_cubic_resids, start = c(2018), end = c(2018))
 
 plugin.forecast <-
-  gdp2023.residual * ARMA1_DT$coef[1] + ARMA1_DT$coef[2] 
-
-# + ARMA1$coef[3] + ARMA1$coef[4] + ARMA1$coef[5] + ARMA1$coef[6] + ARMA1$coef[7] + ARMA1$coef[8] + ARMA1$coef[9]
+  gdp2023.residual * ARMA1_DT$coef[1] + ARMA1_DT$coef[2]
 
 print(plugin.forecast)
 ```
@@ -253,15 +174,11 @@ print(plugin.forecast)
 ```{r}
 # ENSURE THE DENOMINATOR I.E. 40 or whatever matches what is up top
 gdp2023.residual <-
-  window(DTGDP_cubic_resids, start = c(1980), end = c(2020))
+  window(DTGDP_cubic_resids, start = c(1980), end = c(2018))
 
 t <- length(gdp2023.residual) + 1
 
-forecasted.value <- DTGDP_cubic$coefficients[1] + DTGDP_cubic$coefficients[2] * (t ^ 3)
-  
-  
-# Mod4$coefficients[3] *
-# sin((2 * pi * t) / 44) + Mod4$coefficients[4] * cos((2 * pi * t) / 44)
+forecasted.value <- DTGDP$coefficients[1] + DTGDP$coefficients[2] * (t ^ 2) + DTGDP$coefficients[3] * cos((2 * pi * t) / 44)
 
 forecasted.value
 ```
@@ -269,10 +186,6 @@ forecasted.value
 
 ```{r}
 plugin.forecast + forecasted.value
-
-plugin.forecast
-
-forecasted.value
 ```
 
 
