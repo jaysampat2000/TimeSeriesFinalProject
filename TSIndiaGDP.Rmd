@@ -15,14 +15,16 @@ IndiaGDP <- read_excel("India_GDP.xlsx", sheet = "Sheet1")
 IndiaGDP_ts <-
   ts(
     IndiaGDP$GDP,
-    start = c(1980),
-    end = c(2023),
+    start = c(1), # 1980
+    end = c(44), # 2023
     frequency = 1
   )
 t
 
 # plot India GDP
-plot(IndiaGDP_ts, type = "l", col = "blue")
+plot(IndiaGDP_ts, type = "l", main = "India GDP: Meteoric Rise Post 2007", ylab = "GDP in Billions, USD ($)", xlab = "Year", lwd = 2, col = "darkorange")
+# change the x-axis and y-axis labels
+
 ```
 
 # Detrend The Model
@@ -47,7 +49,8 @@ cyc2 <- cos((2 * pi * t) / 44)
 ## Data Partitioning
 ```{r}
 # partition the data - 41 years training, 3 years validation
-train.ts <- window(IndiaGDP_ts, start = c(1980), end = c(2018))
+# change this based on pred year
+train.ts <- window(IndiaGDP_ts, start = c(1), end = c(39)) # 1980, 2018
 valid.ts <- window(IndiaGDP_ts, start = c(2019), end = c(2023))
 # we wanted COVID to be present in both training and validation sets
 # justify why you choose your training period
@@ -89,13 +92,21 @@ summary(DTGDP_cubic_quad) # R^2 = 0.9824. Cubic is `***` and quadratic is not si
 DTGDP_cubic_cyc <- tslm(train.ts ~ I(trend ^ 3) + cyc1[1:39] + cyc2[1:39])
 summary(DTGDP_cubic_cyc) # R^2 = 0.985. Cubic is *** and both cycles are *
 
+# detrend for quadratic and both cycles
+DTGDP_quad_cyc <- tslm(train.ts ~ I(trend ^ 2) + cyc1[1:39] + cyc2[1:39])
+summary(DTGDP_quad_cyc) # R^2 = . Quadratic is *** and cyc2 is *** for 2021
+# cyc1 not significant
+
 # most parsimonious is just cubic
 
 # plot residuals for just cubic
-plot(DTGDP_cubic$residuals, type = "l")
+# plot(DTGDP_cubic$residuals, type = "l")
 
 # plot residuals for cubic and cycles
-plot(DTGDP_cubic_cyc$residuals, type = "l")
+plot(DTGDP_cubic_cyc$residuals, type = "l", main = "Residuals of Cubic and Both Cycles Model", ylab = "Residuals", xlab = "Year", lwd = 2, col = "darkorange")
+
+# plot residuals for DTGDP
+plot(DTGDP$residuals, type = "l", main = "Residuals of Quadratic + Cycle2 Model", ylab = "Residuals", xlab = "Year", lwd = 2, col = "darkorange")
 
 # cubic is better
 
@@ -108,7 +119,7 @@ durbinWatsonTest(DTGDP)
 # Alternative hypothesis: rho != 0
 # there is autocorrelation
 
-# store residuals - MAKE SURE THIS IS USING THE BEST MODEL
+# store residuals - MAKE SURE THIS IS USING THE BEST MODEL based on R^2
 DTGDP_cubic_resids <- DTGDP$residuals
 
 # Check ACF PACF of residuals
@@ -163,7 +174,7 @@ autoplot(Fcast)
 Prediction for 2024
 ```{r}
 gdp2023.residual <-
-  window(DTGDP_cubic_resids, start = c(2018), end = c(2018))
+  window(DTGDP_cubic_resids, start = c(2022), end = c(2022))
 
 plugin.forecast <-
   gdp2023.residual * ARMA1_DT$coef[1] + ARMA1_DT$coef[2]
@@ -173,11 +184,13 @@ print(plugin.forecast)
 
 ```{r}
 # ENSURE THE DENOMINATOR I.E. 40 or whatever matches what is up top
+# change this to match pred year - 1
 gdp2023.residual <-
-  window(DTGDP_cubic_resids, start = c(1980), end = c(2018))
+  window(DTGDP_cubic_resids, start = c(1980), end = c(2022))
 
 t <- length(gdp2023.residual) + 1
 
+# check this for best model R^2 and make sure it matches
 forecasted.value <- DTGDP$coefficients[1] + DTGDP$coefficients[2] * (t ^ 2) + DTGDP$coefficients[3] * cos((2 * pi * t) / 44)
 
 forecasted.value
@@ -187,5 +200,140 @@ forecasted.value
 ```{r}
 plugin.forecast + forecasted.value
 ```
+
+Future
+```{r}
+# Extend the time variable 't' for forecasting
+future_t <-
+  (max(IndiaGDP$t) + 1):(max(IndiaGDP$t) + 11)  # For 2024-2034
+
+# Calculate future cyclical components based on future_t
+future_cyc2 <- cos((2 * pi * future_t) / 44)
+
+# Forecast GDP using the DTGDP model coefficients
+# Assuming the model is of the form: GDP ~ I(trend ^ 2) + cyc2
+# Adjust the coefficients indexing based on your actual model summary
+future_gdp_forecast <- DTGDP$coefficients[1] +
+  DTGDP$coefficients[2] * (future_t ^ 2) +
+  DTGDP$coefficients[3] * future_cyc2
+
+# Print the forecasted GDP values
+print(future_gdp_forecast)
+
+
+# throw these numbers in a data frame. Add a new column for year beginning with 2024
+future_gdp_forecast_df <- data.frame(
+  Year = 2024:2034,
+  Forecasted_GDP = future_gdp_forecast
+)
+```
+
+This is a conservative prediction because we have signs of overfitting in the model which could lead to underestimation of the GDP. This is what it should be and show the statista. We hope for an exponential. 
+
+Based on historical data there is no clear evidence of an outright exponential spike. However, due to external information and jobs and other indicators [look up], that is what should contribute to the spike.
+
+Our model is not doing that because you cannot predict GDP off of GDP itself.
+
+Cite the paper no matter how useless.
+
+
+Fitted values, plot neural network on the detrended data
+
+
+```{r}
+# plot the residuals of DTGDP and forecast using neural network
+
+setup2 <- nnetar(DTGDP$residuals[1:39],
+                 p = 12,
+                 repeats = 20,
+                 lambda = "auto")
+
+#Once the model is set up, we forecast. PI - prediction intervals
+Fcast2 <- forecast(setup2, PI = TRUE, h = 5)
+#Show results
+autoplot(Fcast2)
+```
+
+Assessing the Fitted Model
+
+```{r}
+Actual <- IndiaGDP_ts[40:44]
+Nnet_actual <- Fcast$mean
+Nnet_actual_MAPE <- mean(abs(Actual - Nnet_actual) / Actual)
+Nnet_actual_MAPE
+
+Actual1 <- valid.ts[1:5]
+Nnet_DT <- Fcast2$mean
+Nnet_DT_MAPE <- mean(abs(Actual1 - Nnet_DT) / Actual1)
+Nnet_DT_MAPE
+```
+
+India TS Neural Net - showing the fitted/how it fits
+
+```{r}
+par(mfrow = c(1, 1))
+plot(
+  IndiaGDP_ts,
+  ylim = c(150, 4000),
+  ylab = "India GDP",
+  xlab = "Year",
+  type = "l",
+  xaxt = "n",
+  xlim = c(1, 44),
+  main = "",
+  lty = 2
+)
+axis(1, at = seq(1, 44, 1), labels = format(seq(1, 44, 1)))
+lines(Fcast$mean, col = "blue")
+lines(Fcast$fitted, col = "red")
+lines(c(40, 40), c(150, 4000))
+lines(c(44, 44), c(150, 4000))
+legend(
+  "topleft",
+  inset = c(0, 0),
+  legend = c(
+    "Neural Network Forecast - mean value",
+    "Actual",
+    "Fitted to Training data"
+  ),
+  col = c("black", "blue", "red"),
+  pch = 1,
+  cex = 0.5
+)
+```
+
+Same thing for DT
+
+```{r}
+plot(
+  DTGDP$residuals,
+  ylim = c(-150, 200),
+  ylab = "Milk",
+  xlab = "Time",
+  type = "l",
+  xaxt = "n",
+  xlim = c(1, 44),
+  main = "",
+  lty = 2
+)
+axis(1, at = seq(1, 44, 1), labels = format(seq(1, 44, 1)))
+lines(Fcast2$mean, col = "blue")
+lines(Fcast2$fitted, col = "red")
+lines(c(40, 40), c(-300, 300))
+lines(c(44, 44), c(-300, 300))
+legend(
+  "topleft",
+  inset = c(0, 0),
+  legend = c(
+    "Neural Network Forecast - mean value",
+    "Actual",
+    "Fitted to Training data"
+  ),
+  col = c("black", "blue", "red"),
+  pch = 1,
+  cex = 0.5
+)
+```
+
 
 
